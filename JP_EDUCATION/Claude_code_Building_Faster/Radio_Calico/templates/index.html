@@ -4,15 +4,102 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Radio Calico</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <header>
-        <h1>Radio Calico</h1>
-    </header>
-    <main>
-        <p>Local dev environment is running.</p>
+
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Radio Calico" class="nav-logo" onerror="this.style.display='none'">
+            <span class="nav-wordmark">Radio <span class="nav-accent">&#9426;</span> Calico</span>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="player-card">
+
+            <div class="player-artwork">
+                <div class="artwork-placeholder" id="artworkPlaceholder">
+                    <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <circle cx="60" cy="60" r="60" fill="#D8F2D5"/>
+                        <circle cx="60" cy="60" r="28" fill="#38A29D" opacity="0.3"/>
+                        <circle cx="60" cy="60" r="10" fill="#38A29D"/>
+                        <path d="M60 10 A50 50 0 0 1 110 60" stroke="#1F4E23" stroke-width="4" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <img id="artworkImg" class="artwork-img" src="" alt="Album art" style="display:none">
+                <div class="live-badge">LIVE</div>
+            </div>
+
+            <div class="player-info">
+                <div class="track-meta">
+                    <h1 class="track-artist" id="trackArtist">Radio Calico</h1>
+                    <h2 class="track-title" id="trackTitle">Live Stream</h2>
+                    <p class="track-album" id="trackAlbum">Lossless 24-bit / 48 kHz</p>
+                </div>
+
+                <div class="quality-row">
+                    <div class="quality-item">
+                        <span class="quality-label">Source quality:</span>
+                        <span class="quality-value">24-bit / 48 kHz lossless</span>
+                    </div>
+                    <div class="quality-item">
+                        <span class="quality-label">Stream quality:</span>
+                        <span class="quality-value" id="streamQuality">Connecting…</span>
+                    </div>
+                </div>
+
+                <div class="progress-row" id="progressRow">
+                    <span class="time-label" id="timeElapsed">0:00</span>
+                    <div class="progress-bar-track">
+                        <div class="progress-bar-fill" id="progressFill"></div>
+                    </div>
+                    <span class="time-label" id="timeRemaining">—</span>
+                </div>
+
+                <div class="player-controls">
+                    <button class="play-btn" id="playBtn" aria-label="Play" title="Play">
+                        <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon points="5,3 19,12 5,21"/>
+                        </svg>
+                        <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" style="display:none">
+                            <rect x="5" y="3" width="4" height="18"/>
+                            <rect x="15" y="3" width="4" height="18"/>
+                        </svg>
+                    </button>
+
+                    <div class="volume-group">
+                        <svg class="volume-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/>
+                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                        </svg>
+                        <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.01" value="1" aria-label="Volume">
+                    </div>
+
+                    <span class="status-text" id="statusText">Ready</span>
+                </div>
+
+                <div class="error-msg" id="errorMsg" style="display:none"></div>
+            </div>
+
+        </div>
+        <section class="history-section" id="historySection" style="display:none">
+            <h2 class="history-heading">Recently Played</h2>
+            <ul class="history-list" id="historyList"></ul>
+        </section>
     </main>
+
+    <footer class="site-footer">
+        <p>Ad-free &nbsp;·&nbsp; Data-free &nbsp;·&nbsp; Subscription-free</p>
+    </footer>
+
+    <audio id="radioAudio" preload="none"></audio>
+
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>

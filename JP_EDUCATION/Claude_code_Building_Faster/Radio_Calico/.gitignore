@@ -4,3 +4,7 @@ __pycache__/
 *.pyc
 .env
 *.db
+.claude/
+.playwright-mcp/
+static/covers/
+radio_calico_preview.png

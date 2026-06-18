@@ -36,9 +36,11 @@ source venv/bin/activate
 flask run
 ```
 
-App runs at `http://localhost:5000`.
+App runs at `http://localhost:5050`.
 
 Debug mode is on by default (`.env` sets `FLASK_DEBUG=1`).
+
+Note: port 5000 is reserved by macOS AirPlay Receiver — use 5050.
 
 ---
 
