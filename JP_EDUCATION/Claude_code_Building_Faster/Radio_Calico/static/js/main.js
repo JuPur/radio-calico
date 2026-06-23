@@ -15,7 +15,9 @@ const historyList        = document.getElementById("historyList");
 const playBtn    = document.getElementById("playBtn");
 const iconPlay   = playBtn.querySelector(".icon-play");
 const iconPause  = playBtn.querySelector(".icon-pause");
+const btnLabel   = playBtn.querySelector(".btn-label");
 const volumeSlider = document.getElementById("volumeSlider");
+const volumePct  = document.getElementById("volumePct");
 const statusText = document.getElementById("statusText");
 const streamQuality = document.getElementById("streamQuality");
 const errorMsg   = document.getElementById("errorMsg");
@@ -50,7 +52,8 @@ function setPlayingUI(isPlaying) {
     playing = isPlaying;
     iconPlay.style.display  = isPlaying ? "none"  : "block";
     iconPause.style.display = isPlaying ? "block" : "none";
-    playBtn.setAttribute("aria-label", isPlaying ? "Pause" : "Play");
+    btnLabel.textContent    = isPlaying ? "Stop"  : "Play Stream";
+    playBtn.setAttribute("aria-label", isPlaying ? "Stop" : "Play");
 }
 
 function fmt(sec) {
@@ -252,6 +255,7 @@ playBtn.addEventListener("click", () => {
 
 volumeSlider.addEventListener("input", () => {
     audio.volume = parseFloat(volumeSlider.value);
+    volumePct.textContent = Math.round(volumeSlider.value * 100) + "%";
 });
 
 // Load history immediately on page open
