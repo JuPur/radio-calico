@@ -1,6 +1,28 @@
 const STREAM_URL  = "https://d3d4yli4hf5bmh.cloudfront.net/hls/live.m3u8";
 const POLL_MS     = 5000;
 
+// Unique visitor ID — persists across page refreshes, one vote per song per browser
+function getVisitorId() {
+    let id = localStorage.getItem("rc_visitor_id");
+    if (!id) {
+        id = crypto.randomUUID();
+        localStorage.setItem("rc_visitor_id", id);
+    }
+    return id;
+}
+const VISITOR_ID = getVisitorId();
+
+// Locally cached votes: { song_key: "up" | "down" }
+function getVotes() {
+    try { return JSON.parse(localStorage.getItem("rc_votes") || "{}"); }
+    catch { return {}; }
+}
+function saveVote(songKey, direction) {
+    const v = getVotes();
+    v[songKey] = direction;
+    localStorage.setItem("rc_votes", JSON.stringify(v));
+}
+
 const audio              = document.getElementById("radioAudio");
 const artworkPlaceholder = document.getElementById("artworkPlaceholder");
 const artworkImg         = document.getElementById("artworkImg");
@@ -12,6 +34,14 @@ const timeRemaining      = document.getElementById("timeRemaining");
 const progressFill       = document.getElementById("progressFill");
 const historySection     = document.getElementById("historySection");
 const historyList        = document.getElementById("historyList");
+const ratingRow          = document.getElementById("ratingRow");
+const ratingPrompt       = document.getElementById("ratingPrompt");
+const ratingPromptBtn    = document.getElementById("ratingPromptBtn");
+const ratingButtons      = document.getElementById("ratingButtons");
+const thumbsUpBtn        = document.getElementById("thumbsUpBtn");
+const thumbsDownBtn      = document.getElementById("thumbsDownBtn");
+const thumbsUpCount      = document.getElementById("thumbsUpCount");
+const thumbsDownCount    = document.getElementById("thumbsDownCount");
 const playBtn    = document.getElementById("playBtn");
 const iconPlay   = playBtn.querySelector(".icon-play");
 const iconPause  = playBtn.querySelector(".icon-pause");
@@ -29,10 +59,34 @@ let pollTimer  = null;
 let clockTimer = null;
 
 // Timing state synced from server
-let _elapsed   = 0;    // seconds, as of last poll
+let _elapsed   = 0;
 let _duration  = null;
-let _pollAt    = 0;    // performance.now() when last poll completed
-let _lastTitle = null; // track change detection for cover cache-bust
+let _pollAt    = 0;
+let _lastTitle = null;
+let _songKey   = null;
+
+function renderRatings(songKey, thumbsUp, thumbsDown) {
+    if (!songKey) { ratingRow.style.display = "none"; return; }
+
+    ratingRow.style.display = "flex";
+    thumbsUpCount.textContent   = thumbsUp;
+    thumbsDownCount.textContent = thumbsDown;
+
+    const prior = getVotes()[songKey];
+    if (prior) {
+        // Already voted — show buttons with counts, skip prompt
+        ratingPrompt.style.display   = "none";
+        ratingButtons.style.display  = "flex";
+        thumbsUpBtn.classList.toggle("voted-up",    prior === "up");
+        thumbsDownBtn.classList.toggle("voted-down", prior === "down");
+    } else {
+        // Not yet voted — show prompt only
+        ratingPrompt.style.display   = "block";
+        ratingButtons.style.display  = "none";
+        thumbsUpBtn.classList.remove("voted-up");
+        thumbsDownBtn.classList.remove("voted-down");
+    }
+}
 
 function setStatus(msg) {
     statusText.textContent = msg;
@@ -52,7 +106,7 @@ function setPlayingUI(isPlaying) {
     playing = isPlaying;
     iconPlay.style.display  = isPlaying ? "none"  : "block";
     iconPause.style.display = isPlaying ? "block" : "none";
-    btnLabel.textContent    = isPlaying ? "Stop"  : "Play Stream";
+    btnLabel.textContent    = isPlaying ? "Stop"  : "Listen Now";
     playBtn.setAttribute("aria-label", isPlaying ? "Stop" : "Play");
 }
 
@@ -99,6 +153,8 @@ async function fetchNowPlaying() {
         }
 
         _lastTitle = data.title;
+        _songKey   = data.song_key || null;
+        renderRatings(_songKey, data.thumbs_up ?? 0, data.thumbs_down ?? 0);
 
         if (Array.isArray(data.history)) {
             renderHistory(data.history);
@@ -257,6 +313,46 @@ volumeSlider.addEventListener("input", () => {
     audio.volume = parseFloat(volumeSlider.value);
     volumePct.textContent = Math.round(volumeSlider.value * 100) + "%";
 });
+
+async function submitRating(isThumbsUp) {
+    if (!_songKey) return;
+    const direction = isThumbsUp ? "up" : "down";
+    const prior = getVotes()[_songKey];
+    if (prior === direction) return;
+
+    // Optimistic count update
+    let up   = parseInt(thumbsUpCount.textContent);
+    let down = parseInt(thumbsDownCount.textContent);
+    if (prior === "up")   up--;
+    if (prior === "down") down--;
+    if (isThumbsUp) up++; else down++;
+
+    saveVote(_songKey, direction);
+    renderRatings(_songKey, up, down);
+
+    try {
+        const res  = await fetch("/api/rate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ song_key: _songKey, visitor_id: VISITOR_ID, is_thumbs_up: isThumbsUp }),
+        });
+        const data = await res.json();
+        if (data.thumbs_up != null) {
+            thumbsUpCount.textContent   = data.thumbs_up;
+            thumbsDownCount.textContent = data.thumbs_down;
+        }
+    } catch (_) {
+        // Keep the local optimistic update; server sync will catch up on next poll
+    }
+}
+
+ratingPromptBtn.addEventListener("click", () => {
+    ratingPrompt.style.display  = "none";
+    ratingButtons.style.display = "flex";
+});
+
+thumbsUpBtn.addEventListener("click",   () => submitRating(true));
+thumbsDownBtn.addEventListener("click", () => submitRating(false));
 
 // Load history immediately on page open
 fetch("/api/history").then(r => r.json()).then(renderHistory).catch(() => {});

@@ -1,10 +1,13 @@
-from flask import Flask, render_template, jsonify
-from models import db, PlayHistory
+from flask import Flask, render_template, jsonify, request
+from models import db, PlayHistory, SongRating
+from sqlalchemy import func
 import requests
 import time
 import re
 import os
 from bs4 import BeautifulSoup
+
+_UUID_RE = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///radio_calico.db"
@@ -68,9 +71,61 @@ def _lookup_duration(artist, title):
     return None
 
 
+def _song_key(title: str, artist: str) -> str:
+    return f"{title}||{artist}"
+
+
+def _rating_counts(song_key: str) -> dict:
+    rows = (
+        db.session.query(SongRating.is_thumbs_up, func.count(SongRating.id))
+        .filter_by(song_key=song_key)
+        .group_by(SongRating.is_thumbs_up)
+        .all()
+    )
+    thumbs_up = thumbs_down = 0
+    for is_up, count in rows:
+        if is_up:
+            thumbs_up = count
+        else:
+            thumbs_down = count
+    return {"thumbs_up": thumbs_up, "thumbs_down": thumbs_down}
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/api/rate", methods=["POST"])
+def rate():
+    data       = request.get_json(silent=True) or {}
+    song_key   = (data.get("song_key") or "").strip()[:500]
+    visitor_id = (data.get("visitor_id") or "").strip()
+    thumb      = data.get("is_thumbs_up")
+
+    if not song_key or not _UUID_RE.match(visitor_id) or thumb is None:
+        return jsonify({"error": "invalid_request"}), 400
+
+    existing = SongRating.query.filter_by(
+        song_key=song_key, visitor_id=visitor_id
+    ).first()
+    if existing:
+        if existing.is_thumbs_up == bool(thumb):
+            return jsonify(_rating_counts(song_key))
+        existing.is_thumbs_up = bool(thumb)
+        existing.rated_at = time.time()
+    else:
+        db.session.add(SongRating(
+            song_key=song_key,
+            visitor_id=visitor_id,
+            is_thumbs_up=bool(thumb),
+            rated_at=time.time(),
+        ))
+    db.session.commit()
+
+    result = jsonify(_rating_counts(song_key))
+    result.headers["Cache-Control"] = "no-store"
+    return result
 
 
 @app.route("/api/history")
@@ -139,15 +194,21 @@ def nowplaying():
                 .all()
         ]
 
+        sk      = _song_key(title, artist) if (title and artist) else None
+        ratings = _rating_counts(sk) if sk else {"thumbs_up": 0, "thumbs_down": 0}
+
         result = jsonify({
-            "title":     title,
-            "artist":    artist,
-            "album":     album,
-            "cover":     _track["cover"],
-            "elapsed":   elapsed,
-            "duration":  duration,
-            "remaining": remaining,
-            "history":   history,
+            "title":      title,
+            "artist":     artist,
+            "album":      album,
+            "cover":      _track["cover"],
+            "elapsed":    elapsed,
+            "duration":   duration,
+            "remaining":  remaining,
+            "history":    history,
+            "song_key":   sk,
+            "thumbs_up":  ratings["thumbs_up"],
+            "thumbs_down": ratings["thumbs_down"],
         })
         result.headers["Cache-Control"] = "no-store"
         return result

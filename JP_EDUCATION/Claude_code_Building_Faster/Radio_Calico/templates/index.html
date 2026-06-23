@@ -34,7 +34,7 @@
                         <rect x="5" y="3" width="4" height="18"/>
                         <rect x="15" y="3" width="4" height="18"/>
                     </svg>
-                    <span class="btn-label">Play Stream</span>
+                    <span class="btn-label">Listen Now</span>
                 </button>
 
                 <div class="volume-group">
@@ -86,6 +86,20 @@
                     <div class="progress-bar-fill" id="progressFill"></div>
                 </div>
                 <span class="time-label" id="timeRemaining">—</span>
+            </div>
+
+            <div class="rating-row" id="ratingRow" style="display:none">
+                <div id="ratingPrompt">
+                    <button class="rating-prompt-btn" id="ratingPromptBtn">Rate this track</button>
+                </div>
+                <div id="ratingButtons" style="display:none">
+                    <button class="rating-btn" id="thumbsUpBtn" aria-label="Thumbs up">
+                        👍 <span id="thumbsUpCount">0</span>
+                    </button>
+                    <button class="rating-btn" id="thumbsDownBtn" aria-label="Thumbs down">
+                        👎 <span id="thumbsDownCount">0</span>
+                    </button>
+                </div>
             </div>
         </div>
 
