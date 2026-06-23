@@ -1,0 +1,186 @@
+Radio Kryten Brand & UI Style Guide
+=====================================
+
+Inspired by the visual world of Kelly Boesh: tactile, handmade, warm but
+melancholy. Think felt textures, burnt orange wool, stormy grey skies, and
+the quiet personality of found objects.
+
+
+1. Logo & Usage
+---------------
+
+Image:       kryten.jpg
+Shape:       Circular crop (border-radius: 50%)
+Size:        100 x 100 px on screen
+Shadow:      0 4px 16px rgba(0,0,0,0.35)
+Placement:   Centered above station title in site header
+Don'ts:
+  - Don't stretch or skew the image
+  - Don't use on light backgrounds without shadow
+  - Don't use a square crop
+
+
+2. Color Palette
+----------------
+
+| Name           | Hex      | RGB           | Usage                                      |
+|----------------|----------|---------------|--------------------------------------------|
+| Burnt Orange   | #C45018  | 196/80/24     | Primary buttons, accents, section headings |
+| Orange Hover   | #A33E12  | 163/62/18     | Button hover state                         |
+| Background Mid | #3A3C46  | 58/60/70      | Gradient start (top-left)                  |
+| Background Dark| #252730  | 37/39/48      | Gradient end (bottom-right)                |
+| Card Background| #F0E8DA  | 240/232/218   | Card surfaces                              |
+| Card Border    | #D5C8B5  | 213/200/181   | Card borders, slider track, rating buttons |
+| Charcoal       | #2B211E  | 43/33/30      | Body text, volume thumb                    |
+| Warm Grey      | #7A7060  | 122/112/96    | Secondary text, labels, metadata           |
+| Cream          | #E5D9C5  | 229/217/197   | Progress bar track, history item background|
+| White          | #FFFFFF  | 255/255/255   | Text on dark backgrounds                   |
+
+Background: linear-gradient(160deg, #3A3C46 0%, #252730 100%)
+
+Rating states (special use only):
+  Thumbs up voted:   background #E8F5E9 / border #6AAF6A / text #3A7A3A
+  Thumbs down voted: background #FBE9E7 / border #C4785A / text #9B3A2A
+  Error state:       background #F5E0DA / border #DDB0A0 / text #9B3A2A
+  Status active:     #5A7A5A (muted green, italic)
+
+
+3. Typography
+-------------
+
+| Style          | Font              | Weight | Size       | Usage                         |
+|----------------|-------------------|--------|------------|-------------------------------|
+| Station Title  | Playfair Display  | 700    | 2.5rem     | Site header H1                |
+| Section Heading| Playfair Display  | 700    | 1.1rem     | Now Playing, Recently Played  |
+| Track Title    | Playfair Display  | 700    | 1.25rem    | Current song title            |
+| Body           | Open Sans         | 400    | 1rem       | General text, line-height 1.6 |
+| Label          | Open Sans         | 600    | 0.85rem    | Volume label, metadata        |
+| Small          | Open Sans         | 400    | 0.78–0.8rem| Stream info, timestamps       |
+| Button         | Open Sans         | 700    | 0.95rem    | CTA buttons, UPPERCASE        |
+
+Fallback stack: "Playfair Display", Georgia, serif
+                "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
+
+Google Fonts import:
+  Playfair Display: wght@700
+  Open Sans: ital,wght@0,400;0,600;1,400
+
+
+4. Spacing & Layout
+-------------------
+
+Max content width:  600px, centered
+Page padding:       0 1.5rem
+Card gap:           1.25rem between stacked cards
+Card padding:       1.75rem 2rem (desktop) / 1.25rem (mobile, ≤540px)
+Vertical rhythm:    multiples of 0.25rem
+
+Border radius:
+  Cards:            20px  (--radius-card)
+  Buttons (pill):   100px (--radius-btn)
+  Artwork:          12px
+  History thumbs:   8px
+  Live badge:       100px (pill)
+  Error / rating:   10px
+
+Card shadow: 0 8px 32px rgba(0,0,0,0.28)
+Logo shadow: 0 4px 16px rgba(0,0,0,0.35)
+
+
+5. UI Components
+----------------
+
+Primary Button (LISTEN NOW / STOP)
+  Background:     #C45018
+  Hover:          #A33E12
+  Text:           #FFFFFF, Open Sans 700, uppercase, letter-spacing 0.06em
+  Padding:        0.6rem 1.4rem
+  Border-radius:  100px
+  Transition:     background 0.15s, transform 0.1s
+  Active:         scale(0.97)
+
+Genre Tags
+  Text:           #C45018, Open Sans 600, uppercase, letter-spacing 0.08em, 0.75rem
+  Border:         1px solid rgba(196,80,24,0.45), border-radius 100px
+  Padding:        0.25rem 0.85rem
+  Background:     none
+
+Rate This Track Prompt
+  Font:           Playfair Display 700, 1rem
+  Color:          #C45018
+  Border:         1px solid rgba(196,80,24,0.35), border-radius 100px
+  Padding:        0.4rem 1.1rem
+  Hover:          background rgba(196,80,24,0.07), border #C45018
+
+Rating Buttons (thumbs)
+  Background:     #E5D9C5 (cream)
+  Border:         1px solid #D5C8B5, border-radius 100px
+  Padding:        0.3rem 0.85rem
+  Font:           Open Sans 600, 0.9rem
+  Hover:          background #D5C8B5
+
+Volume Slider
+  Track:          4px height, #E5D9C5 background
+  Thumb:          16x16px circle, #2B211E, shadow 0 1px 3px rgba(0,0,0,0.25)
+
+Progress Bar
+  Track:          4px height, #E5D9C5
+  Fill:           #C45018, transition width 1s linear
+
+Live Badge
+  Background:     #C45018
+  Text:           #FFFFFF, Open Sans 700, 0.6rem, letter-spacing 0.1em
+  Position:       Absolute top-right of artwork, -6px offset
+  Border-radius:  100px
+
+
+6. Page Structure
+-----------------
+
+Header (on dark gradient background)
+  - Circular logo image, 100px
+  - Station title: Playfair Display 700, 2.5rem, white
+  - Subtitle: 0.9rem, rgba(255,255,255,0.55), letter-spacing 0.06em
+  - Genre tags row: Indie · Alternative · Art Pop
+
+Three stacked cards (max-width 600px, centered):
+  1. Player Card — controls, volume, status, stream info
+  2. Now Playing Card — artwork, track title/artist/album, progress, rating
+  3. Recently Played Card — list of last 5 tracks with artwork, title, artist, album
+
+Footer (rgba(0,0,0,0.2) background)
+  - Text: rgba(255,255,255,0.4), 0.78rem, letter-spacing 0.04em
+  - Content: Ad-free · Data-free · Subscription-free
+
+
+7. Imagery
+----------
+
+Album art:        Sourced from iTunes CDN (permanent URLs only)
+                  Displayed at 90x90px, border-radius 12px
+                  Fallback: cream circle with burnt orange vinyl motif SVG
+History thumbs:   40x40px, border-radius 8px, object-fit cover
+Photography:      Warm, tactile, slightly worn — consistent with Kelly Boesh aesthetic
+Avoid:            Flat corporate stock imagery, cool/blue colour grading
+
+
+8. Voice & Tone
+---------------
+
+Personality:      Curious, warm, slightly quirky — like the station has a personality
+CTA copy:         LISTEN NOW (not "Play", not "Start Stream")
+Station tagline:  Live Lossless Audio Stream
+Genre identity:   Indie · Alternative · Art Pop
+Footer:           Ad-free · Data-free · Subscription-free
+Status messages:  Conversational — "Ready", "Connecting…", "Playing", "Stopped"
+Avoid:            Corporate language, exclamation marks, generic phrasing
+
+
+9. Responsive Behaviour
+-----------------------
+
+Breakpoint: 540px
+  - Site title: 1.9rem
+  - Card padding: 1.25rem
+  - Controls row gap: 0.75rem
+  - Now playing body gap: 1rem
