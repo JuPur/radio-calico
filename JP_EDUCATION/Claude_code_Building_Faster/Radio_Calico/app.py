@@ -21,12 +21,13 @@ with app.app_context():
 
 # In-memory current track — resets on restart, that's fine
 _track = {
-    "title":    None,
-    "artist":   None,
-    "album":    None,
-    "cover":    None,
-    "start":    None,
-    "duration": None,
+    "title":         None,
+    "artist":        None,
+    "album":         None,
+    "cover":         None,  # display cover (iTunes or radio fallback)
+    "itunes_cover":  None,  # permanent iTunes URL — the only one safe to store in history
+    "start":         None,
+    "duration":      None,
 }
 
 
@@ -160,27 +161,28 @@ def nowplaying():
         album     = paras[2].get_text(strip=True) if len(paras) > 2 else None
 
         if title != _track["title"]:
-            # Persist outgoing track to history
+            # Persist outgoing track to history (only use permanent iTunes cover)
             if _track["title"]:
                 db.session.add(PlayHistory(
                     title=_track["title"],
                     artist=_track["artist"],
                     album=_track["album"],
-                    cover=_track["cover"],
+                    cover=_track["itunes_cover"],
                     played_at=time.time(),
                 ))
                 db.session.commit()
 
             # Look up permanent cover art and duration for new track
-            itunes_cover = _itunes_cover(artist, title) if (artist and title) else None
+            itunes_cover   = _itunes_cover(artist, title) if (artist and title) else None
             fallback_cover = cover_el["src"] if cover_el else None
 
-            _track["title"]    = title
-            _track["artist"]   = artist
-            _track["album"]    = album
-            _track["cover"]    = itunes_cover or fallback_cover
-            _track["start"]    = time.time()
-            _track["duration"] = _lookup_duration(artist, title) if (artist and title) else None
+            _track["title"]        = title
+            _track["artist"]       = artist
+            _track["album"]        = album
+            _track["cover"]        = itunes_cover or fallback_cover  # now-playing display
+            _track["itunes_cover"] = itunes_cover                    # history only
+            _track["start"]        = time.time()
+            _track["duration"]     = _lookup_duration(artist, title) if (artist and title) else None
 
         elapsed   = int(time.time() - _track["start"]) if _track["start"] else 0
         duration  = _track["duration"]
