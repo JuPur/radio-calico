@@ -203,6 +203,30 @@ body {
     flex-shrink: 0;
 }
 
+/* === Quality Row === */
+.quality-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.85rem;
+    flex-wrap: wrap;
+}
+
+.quality-item {
+    font-size: 0.78rem;
+    color: var(--warm-grey);
+}
+
+.quality-item strong {
+    color: var(--charcoal);
+    font-weight: 600;
+}
+
+.quality-divider {
+    font-size: 0.78rem;
+    color: var(--card-border);
+}
+
 /* === Status Row === */
 .status-row {
     margin-top: 0.9rem;
@@ -405,7 +429,7 @@ body {
 }
 
 #ratingButtons {
-    display: flex;
+    display: none;
     align-items: center;
     gap: 0.75rem;
 }
@@ -519,6 +543,14 @@ body {
     padding: 1.25rem;
     letter-spacing: 0.04em;
 }
+
+/* === Initially hidden — JS toggles visibility via style.display === */
+.icon-pause,
+.artwork-img,
+.error-msg,
+#statusText,
+#ratingRow,
+#historySection { display: none; }
 
 /* === Responsive === */
 @media (max-width: 540px) {

@@ -4,8 +4,10 @@ from sqlalchemy import func
 import requests
 import time
 import re
-import os
+import logging
 from bs4 import BeautifulSoup
+
+logger = logging.getLogger(__name__)
 
 _UUID_RE = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
 
@@ -46,7 +48,7 @@ def _itunes_cover(artist, title):
             if url:
                 return url.replace("100x100bb.jpg", "600x600bb.jpg")
     except Exception:
-        pass
+        logger.warning("iTunes cover lookup failed for '%s – %s'", artist, title, exc_info=True)
     return None
 
 
@@ -68,7 +70,7 @@ def _lookup_duration(artist, title):
         if recordings and recordings[0].get("length"):
             return recordings[0]["length"] // 1000
     except Exception:
-        pass
+        logger.warning("MusicBrainz duration lookup failed for '%s – %s'", artist, title, exc_info=True)
     return None
 
 
@@ -92,6 +94,16 @@ def _rating_counts(song_key: str) -> dict:
     return {"thumbs_up": thumbs_up, "thumbs_down": thumbs_down}
 
 
+def _recent_history() -> list:
+    return [
+        h.to_dict()
+        for h in PlayHistory.query
+            .order_by(PlayHistory.played_at.desc())
+            .limit(5)
+            .all()
+    ]
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -112,7 +124,9 @@ def rate():
     ).first()
     if existing:
         if existing.is_thumbs_up == bool(thumb):
-            return jsonify(_rating_counts(song_key))
+            result = jsonify(_rating_counts(song_key))
+            result.headers["Cache-Control"] = "no-store"
+            return result
         existing.is_thumbs_up = bool(thumb)
         existing.rated_at = time.time()
     else:
@@ -174,7 +188,7 @@ def nowplaying():
 
             # Look up permanent cover art and duration for new track
             itunes_cover   = _itunes_cover(artist, title) if (artist and title) else None
-            fallback_cover = cover_el["src"] if cover_el else None
+            fallback_cover = cover_el.get("src") if cover_el else None
 
             _track["title"]        = title
             _track["artist"]       = artist
@@ -188,13 +202,7 @@ def nowplaying():
         duration  = _track["duration"]
         remaining = max(0, duration - elapsed) if duration else None
 
-        history = [
-            h.to_dict()
-            for h in PlayHistory.query
-                .order_by(PlayHistory.played_at.desc())
-                .limit(5)
-                .all()
-        ]
+        history = _recent_history()
 
         sk      = _song_key(title, artist) if (title and artist) else None
         ratings = _rating_counts(sk) if sk else {"thumbs_up": 0, "thumbs_down": 0}
@@ -215,17 +223,11 @@ def nowplaying():
         result.headers["Cache-Control"] = "no-store"
         return result
     except Exception:
-        history = [
-            h.to_dict()
-            for h in PlayHistory.query
-                .order_by(PlayHistory.played_at.desc())
-                .limit(5)
-                .all()
-        ]
+        logger.exception("nowplaying failed")
         return jsonify({
             "title": None, "artist": None, "album": None, "cover": None,
             "elapsed": None, "duration": None, "remaining": None,
-            "history": history,
+            "history": _recent_history(),
         }), 502
 
 

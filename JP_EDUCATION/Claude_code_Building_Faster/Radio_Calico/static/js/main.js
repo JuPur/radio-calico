@@ -23,6 +23,10 @@ function saveVote(songKey, direction) {
     localStorage.setItem("rc_votes", JSON.stringify(v));
 }
 
+function escHtml(s) {
+    return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 const audio              = document.getElementById("radioAudio");
 const artworkPlaceholder = document.getElementById("artworkPlaceholder");
 const artworkImg         = document.getElementById("artworkImg");
@@ -142,12 +146,8 @@ async function fetchNowPlaying() {
         if (data.album)  trackAlbum.textContent  = data.album;
 
         if (data.cover) {
-            const trackChanged = data.title !== _lastTitle;
-            // Bust the browser cache when the track changes — the cover URL
-            // is always the same path even though the image content has changed.
-            artworkImg.src = trackChanged
-                ? data.cover + "?t=" + data.elapsed
-                : artworkImg.src || data.cover;
+            const trackChanged = data.song_key !== _songKey;
+            artworkImg.src = trackChanged ? data.cover : artworkImg.src || data.cover;
             artworkImg.style.display = "block";
             artworkPlaceholder.style.display = "none";
         }
@@ -179,11 +179,11 @@ function renderHistory(tracks) {
     historySection.style.display = "block";
     historyList.innerHTML = tracks.map(t => `
         <li class="history-item">
-            <img class="history-thumb" src="${t.cover || ""}" alt="">
+            <img class="history-thumb" src="${escHtml(t.cover)}" alt="">
             <div class="history-meta">
-                <span class="history-artist">${t.artist || ""}</span>
-                <span class="history-title">${t.title || ""}</span>
-                <span class="history-album">${t.album || ""}</span>
+                <span class="history-artist">${escHtml(t.artist)}</span>
+                <span class="history-title">${escHtml(t.title)}</span>
+                <span class="history-album">${escHtml(t.album)}</span>
             </div>
         </li>
     `).join("");
@@ -205,6 +205,15 @@ function stopPolling() {
     progressFill.style.width  = "0%";
 }
 
+function startAudio() {
+    audio.play().then(() => {
+        setPlayingUI(true);
+        setStatus("Playing");
+    }).catch(() => {
+        setStatus("Ready — press play");
+    });
+}
+
 function initHls() {
     if (Hls.isSupported()) {
         hls = new Hls({
@@ -223,12 +232,7 @@ function initHls() {
                 streamQuality.textContent = "HLS ready";
             }
             clearError();
-            audio.play().then(() => {
-                setPlayingUI(true);
-                setStatus("Playing");
-            }).catch(() => {
-                setStatus("Ready — press play");
-            });
+            startAudio();
         });
 
         hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
@@ -240,23 +244,21 @@ function initHls() {
 
         hls.on(Hls.Events.ERROR, (_, data) => {
             if (stopping || !data.fatal) return;
-            if (data.fatal) {
-                switch (data.type) {
-                    case Hls.ErrorTypes.NETWORK_ERROR:
-                        showError("Network error — retrying…");
-                        hls.startLoad();
-                        break;
-                    case Hls.ErrorTypes.MEDIA_ERROR:
-                        showError("Media error — recovering…");
-                        hls.recoverMediaError();
-                        break;
-                    default:
-                        showError("Stream error. Please refresh.");
-                        setPlayingUI(false);
-                        setStatus("Error");
-                        hls.destroy();
-                        break;
-                }
+            switch (data.type) {
+                case Hls.ErrorTypes.NETWORK_ERROR:
+                    showError("Network error — retrying…");
+                    hls.startLoad();
+                    break;
+                case Hls.ErrorTypes.MEDIA_ERROR:
+                    showError("Media error — recovering…");
+                    hls.recoverMediaError();
+                    break;
+                default:
+                    showError("Stream error. Please refresh.");
+                    setPlayingUI(false);
+                    setStatus("Error");
+                    hls.destroy();
+                    break;
             }
         });
 
@@ -266,12 +268,7 @@ function initHls() {
         audio.addEventListener("loadedmetadata", () => {
             streamQuality.textContent = "Native HLS";
             clearError();
-            audio.play().then(() => {
-                setPlayingUI(true);
-                setStatus("Playing");
-            }).catch(() => {
-                setStatus("Ready — press play");
-            });
+            startAudio();
         });
     } else {
         showError("Your browser does not support HLS streaming.");
@@ -320,9 +317,13 @@ async function submitRating(isThumbsUp) {
     const prior = getVotes()[_songKey];
     if (prior === direction) return;
 
+    // Snapshot original counts for rollback
+    const origUp   = parseInt(thumbsUpCount.textContent);
+    const origDown = parseInt(thumbsDownCount.textContent);
+
     // Optimistic count update
-    let up   = parseInt(thumbsUpCount.textContent);
-    let down = parseInt(thumbsDownCount.textContent);
+    let up   = origUp;
+    let down = origDown;
     if (prior === "up")   up--;
     if (prior === "down") down--;
     if (isThumbsUp) up++; else down++;
@@ -340,6 +341,12 @@ async function submitRating(isThumbsUp) {
         if (data.thumbs_up != null) {
             thumbsUpCount.textContent   = data.thumbs_up;
             thumbsDownCount.textContent = data.thumbs_down;
+        } else {
+            // Server rejected the vote — roll back to prior state
+            const votes = getVotes();
+            if (prior) votes[_songKey] = prior; else delete votes[_songKey];
+            localStorage.setItem("rc_votes", JSON.stringify(votes));
+            renderRatings(_songKey, origUp, origDown);
         }
     } catch (_) {
         // Keep the local optimistic update; server sync will catch up on next poll

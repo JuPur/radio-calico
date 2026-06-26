@@ -31,7 +31,7 @@
                     <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
                         <polygon points="5,3 19,12 5,21"/>
                     </svg>
-                    <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" style="display:none">
+                    <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
                         <rect x="5" y="3" width="4" height="18"/>
                         <rect x="15" y="3" width="4" height="18"/>
                     </svg>
@@ -47,9 +47,14 @@
                 <span class="time-counter" id="timeElapsed">0:00</span>
             </div>
 
-            <div class="error-msg" id="errorMsg" style="display:none"></div>
-            <span id="statusText" style="display:none"></span>
-            <span id="streamQuality" style="display:none"></span>
+            <div class="quality-row">
+                <span class="quality-item">Source: <strong>24-bit / 48 kHz lossless</strong></span>
+                <span class="quality-divider">·</span>
+                <span class="quality-item">Stream: <strong id="streamQuality">—</strong></span>
+            </div>
+
+            <div class="error-msg" id="errorMsg"></div>
+            <span id="statusText"></span>
         </div>
 
         <!-- Now Playing Card -->
@@ -66,7 +71,7 @@
                             <path d="M60 10 A50 50 0 0 1 110 60" stroke="#2B211E" stroke-width="4" stroke-linecap="round"/>
                         </svg>
                     </div>
-                    <img id="artworkImg" class="artwork-img" src="" alt="Album art" style="display:none">
+                    <img id="artworkImg" class="artwork-img" src="" alt="Album art">
                     <div class="live-badge">LIVE</div>
                 </div>
 
@@ -84,11 +89,11 @@
                 <span class="time-label" id="timeRemaining">—</span>
             </div>
 
-            <div class="rating-row" id="ratingRow" style="display:none">
+            <div class="rating-row" id="ratingRow">
                 <div id="ratingPrompt">
                     <button class="rating-prompt-btn" id="ratingPromptBtn">Rate this track</button>
                 </div>
-                <div id="ratingButtons" style="display:none">
+                <div id="ratingButtons">
                     <button class="rating-btn" id="thumbsUpBtn" aria-label="Thumbs up">
                         👍 <span id="thumbsUpCount">0</span>
                     </button>
@@ -100,7 +105,7 @@
         </div>
 
         <!-- Recently Played -->
-        <section class="history-section" id="historySection" style="display:none">
+        <section class="history-section" id="historySection">
             <h2 class="section-heading">🎬 Recently Played</h2>
             <ul class="history-list" id="historyList"></ul>
         </section>
