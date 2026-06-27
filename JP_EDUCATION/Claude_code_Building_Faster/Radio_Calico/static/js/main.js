@@ -54,6 +54,7 @@ const volumeSlider = document.getElementById("volumeSlider");
 const volumePct  = document.getElementById("volumePct");
 const statusText = document.getElementById("statusText");
 const streamQuality = document.getElementById("streamQuality");
+const sourceQuality = document.getElementById("sourceQuality");
 const errorMsg   = document.getElementById("errorMsg");
 
 let hls = null;
@@ -143,7 +144,10 @@ async function fetchNowPlaying() {
 
         if (data.artist) trackArtist.textContent = data.artist;
         if (data.title)  trackTitle.textContent  = data.title;
-        if (data.album)  trackAlbum.textContent  = data.album;
+        if (data.album) {
+            trackAlbum.textContent  = data.album;
+            sourceQuality.textContent = data.album;
+        }
 
         if (data.cover) {
             const trackChanged = data.song_key !== _songKey;
