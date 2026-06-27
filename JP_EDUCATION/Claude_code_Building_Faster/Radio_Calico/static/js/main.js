@@ -140,13 +140,14 @@ function tickClock() {
 async function fetchNowPlaying() {
     try {
         const res  = await fetch("/api/nowplaying?_=" + Date.now(), { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
 
         if (data.artist) trackArtist.textContent = data.artist;
         if (data.title)  trackTitle.textContent  = data.title;
         if (data.album) {
             trackAlbum.textContent  = data.album;
-            sourceQuality.textContent = data.album;
+            if (sourceQuality) sourceQuality.textContent = data.album;
         }
 
         if (data.cover) {
@@ -170,8 +171,9 @@ async function fetchNowPlaying() {
             _pollAt   = performance.now();
             tickClock();
         }
-    } catch (_) {
-        // silently ignore — keep showing previous info
+    } catch (err) {
+        console.warn("fetchNowPlaying failed:", err);
+        // keep showing previous info
     }
 }
 
@@ -341,6 +343,7 @@ async function submitRating(isThumbsUp) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ song_key: _songKey, visitor_id: VISITOR_ID, is_thumbs_up: isThumbsUp }),
         });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (data.thumbs_up != null) {
             thumbsUpCount.textContent   = data.thumbs_up;
@@ -352,7 +355,8 @@ async function submitRating(isThumbsUp) {
             localStorage.setItem("rc_votes", JSON.stringify(votes));
             renderRatings(_songKey, origUp, origDown);
         }
-    } catch (_) {
+    } catch (err) {
+        console.warn("submitRating failed:", err);
         // Keep the local optimistic update; server sync will catch up on next poll
     }
 }
@@ -366,7 +370,10 @@ thumbsUpBtn.addEventListener("click",   () => submitRating(true));
 thumbsDownBtn.addEventListener("click", () => submitRating(false));
 
 // Load history immediately on page open
-fetch("/api/history").then(r => r.json()).then(renderHistory).catch(() => {});
+fetch("/api/history")
+    .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+    .then(renderHistory)
+    .catch(err => console.warn("history fetch failed:", err));
 
 audio.addEventListener("waiting",  () => setStatus("Buffering…"));
 audio.addEventListener("playing",  () => { setStatus("Playing"); setPlayingUI(true); });
