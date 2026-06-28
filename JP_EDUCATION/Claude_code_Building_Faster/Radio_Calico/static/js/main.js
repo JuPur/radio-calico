@@ -67,7 +67,6 @@ let clockTimer = null;
 let _elapsed   = 0;
 let _duration  = null;
 let _pollAt    = 0;
-let _lastTitle = null;
 let _songKey   = null;
 
 function renderRatings(songKey, thumbsUp, thumbsDown) {
@@ -146,8 +145,7 @@ async function fetchNowPlaying() {
         if (data.artist) trackArtist.textContent = data.artist;
         if (data.title)  trackTitle.textContent  = data.title;
         if (data.album) {
-            trackAlbum.textContent  = data.album;
-            if (sourceQuality) sourceQuality.textContent = data.album;
+            sourceQuality.textContent = data.album;
         }
 
         if (data.cover) {
@@ -157,7 +155,6 @@ async function fetchNowPlaying() {
             artworkPlaceholder.style.display = "none";
         }
 
-        _lastTitle = data.title;
         _songKey   = data.song_key || null;
         renderRatings(_songKey, data.thumbs_up ?? 0, data.thumbs_down ?? 0);
 
@@ -301,6 +298,7 @@ function stopStream() {
     setPlayingUI(false);
     setStatus("Stopped");
     streamQuality.textContent = "—";
+    sourceQuality.textContent = "—";
     stopping = false;
 }
 
@@ -357,7 +355,10 @@ async function submitRating(isThumbsUp) {
         }
     } catch (err) {
         console.warn("submitRating failed:", err);
-        // Keep the local optimistic update; server sync will catch up on next poll
+        const votes = getVotes();
+        if (prior) votes[_songKey] = prior; else delete votes[_songKey];
+        localStorage.setItem("rc_votes", JSON.stringify(votes));
+        renderRatings(_songKey, origUp, origDown);
     }
 }
 
