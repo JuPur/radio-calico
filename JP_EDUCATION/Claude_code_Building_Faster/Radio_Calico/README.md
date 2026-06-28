@@ -20,6 +20,8 @@ A single-page HLS radio player with live now-playing metadata, cover art, play h
 | Templates | Jinja2 |
 | Frontend | Vanilla HTML / CSS / JS |
 | HLS playback | hls.js (CDN) |
+| Backend tests | pytest + Flask test client |
+| Frontend tests | Jest + jsdom |
 
 ## Getting started
 
@@ -39,15 +41,37 @@ The SQLite database is created automatically on first run at `instance/radio_cal
 ## Project structure
 
 ```
-├── app.py              # Flask app — all routes and API logic
-├── models.py           # SQLAlchemy models (PlayHistory, SongRating)
+├── app.py                  # Flask app — all routes and API logic
+├── models.py               # SQLAlchemy models (PlayHistory, SongRating)
 ├── requirements.txt
+├── pytest.ini              # pytest config
+├── package.json            # Jest config
 ├── templates/
-│   └── index.html      # Single-page Jinja2 template
-└── static/
-    ├── css/style.css
-    ├── js/main.js      # HLS playback, polling, ratings UI
-    └── img/kryten.jpg  # Site logo
+│   └── index.html          # Single-page Jinja2 template
+├── static/
+│   ├── css/style.css
+│   ├── js/
+│   │   ├── ratingUtils.js  # Rating logic — testable, loaded before main.js
+│   │   └── main.js         # HLS playback, polling, DOM wrappers
+│   └── img/kryten.jpg      # Site logo
+└── tests/
+    ├── conftest.py         # pytest fixtures (in-memory SQLite)
+    ├── test_ratings.py     # Backend tests (16 tests)
+    └── js/
+        └── ratingUtils.test.js  # Frontend tests (32 tests)
+```
+
+## Running tests
+
+```bash
+# Backend
+source venv/bin/activate
+pip install pytest   # first time only
+pytest
+
+# Frontend
+npm install          # first time only
+npm test
 ```
 
 ## API
