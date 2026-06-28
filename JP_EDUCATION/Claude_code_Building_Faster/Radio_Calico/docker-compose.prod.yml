@@ -1,0 +1,15 @@
+services:
+  web:
+    build:
+      context: .
+      target: prod
+    ports:
+      - "8000:8000"
+    volumes:
+      - db_data:/app/instance   # SQLite survives container restarts
+    environment:
+      SECRET_KEY: ${SECRET_KEY}   # set in shell: export SECRET_KEY=<strong-random-value>
+    restart: unless-stopped
+
+volumes:
+  db_data:

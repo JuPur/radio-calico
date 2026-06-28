@@ -1,0 +1,13 @@
+venv/
+node_modules/
+instance/
+__pycache__/
+*.pyc
+.env
+.git/
+.claude/
+.playwright-mcp/
+.pytest_cache/
+tests/
+*.zip
+radio_calico_preview.png

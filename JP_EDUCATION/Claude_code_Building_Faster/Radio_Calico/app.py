@@ -4,6 +4,7 @@ from sqlalchemy import func
 import requests
 import time
 import re
+import os
 import logging
 from bs4 import BeautifulSoup
 
@@ -14,7 +15,7 @@ _UUID_RE = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///radio_calico.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SECRET_KEY"] = "dev-secret-change-in-prod"
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-in-prod")
 
 db.init_app(app)
 
