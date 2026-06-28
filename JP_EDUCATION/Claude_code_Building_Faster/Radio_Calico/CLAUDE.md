@@ -18,6 +18,10 @@ Radio_Calico/
 ├── pytest.ini                # pytest config (testpaths = tests, pythonpath = .)
 ├── package.json              # Jest config for frontend tests
 ├── .env                      # FLASK_DEBUG=1, port config
+├── Dockerfile                # Multi-stage: base → dev (Flask) / prod (Gunicorn)
+├── docker-compose.yml        # Dev: port 5050, source volume-mounted for live reload
+├── docker-compose.prod.yml   # Prod: port 8000, SECRET_KEY from env, db_data volume
+├── .dockerignore
 ├── templates/
 │   └── index.html            # Single-page Jinja2 template
 ├── static/
@@ -47,10 +51,13 @@ Radio_Calico/
 - **Frontend:** Plain HTML/CSS/JS — hls.js loaded from CDN for HLS playback
 - **Backend tests:** pytest (in-memory SQLite, Flask test client)
 - **Frontend tests:** Jest + jsdom
+- **Container:** Docker — dev (Flask dev server) and prod (Gunicorn, 4 workers) targets
 
 ---
 
 ## Run
+
+### Local
 
 ```bash
 source venv/bin/activate
@@ -60,6 +67,21 @@ flask run
 App runs at `http://localhost:5050`. Port 5000 is reserved by macOS AirPlay.
 
 Debug mode is on by default (`.env` sets `FLASK_DEBUG=1`).
+
+### Docker
+
+```bash
+# Dev — live reload, source volume-mounted, port 5050
+docker compose up --build
+
+# Prod — Gunicorn, code baked in, port 8000
+export SECRET_KEY=$(openssl rand -hex 32)
+docker compose -f docker-compose.prod.yml up --build
+```
+
+SQLite is stored in a named volume (`db_data`) and survives restarts in both modes.
+
+`SECRET_KEY` falls back to a weak dev default if the env var is unset — always set it in prod.
 
 ---
 

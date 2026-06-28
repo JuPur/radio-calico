@@ -25,6 +25,26 @@ A single-page HLS radio player with live now-playing metadata, cover art, play h
 
 ## Getting started
 
+### Docker (recommended)
+
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+
+```bash
+git clone https://github.com/JuPur/radio-calico.git
+cd radio-calico
+
+# Dev — live reload, port 5050
+docker compose up --build
+
+# Prod — Gunicorn (4 workers), port 8000
+export SECRET_KEY=$(openssl rand -hex 32)
+docker compose -f docker-compose.prod.yml up --build
+```
+
+The SQLite database is stored in a named Docker volume (`db_data`) and survives container restarts.
+
+### Local (without Docker)
+
 ```bash
 git clone https://github.com/JuPur/radio-calico.git
 cd radio-calico
@@ -46,6 +66,10 @@ The SQLite database is created automatically on first run at `instance/radio_cal
 ├── requirements.txt
 ├── pytest.ini              # pytest config
 ├── package.json            # Jest config
+├── Dockerfile              # Multi-stage: dev (Flask) and prod (Gunicorn) targets
+├── docker-compose.yml      # Dev: port 5050, source volume-mounted
+├── docker-compose.prod.yml # Prod: port 8000, code baked in, SECRET_KEY from env
+├── .dockerignore
 ├── templates/
 │   └── index.html          # Single-page Jinja2 template
 ├── static/
