@@ -15,6 +15,8 @@ Radio_Calico/
 ├── app.py                    # Flask app, all routes and API logic
 ├── models.py                 # SQLAlchemy models
 ├── requirements.txt
+├── pytest.ini                # pytest config (testpaths = tests, pythonpath = .)
+├── package.json              # Jest config for frontend tests
 ├── .env                      # FLASK_DEBUG=1, port config
 ├── templates/
 │   └── index.html            # Single-page Jinja2 template
@@ -22,9 +24,15 @@ Radio_Calico/
 │   ├── css/
 │   │   └── style.css
 │   ├── js/
-│   │   └── main.js           # HLS playback, polling, ratings UI
+│   │   ├── ratingUtils.js    # Rating logic (testable, loaded before main.js)
+│   │   └── main.js           # HLS playback, polling, ratings UI wrappers
 │   └── img/
 │       └── kryten.jpg        # Site logo
+├── tests/
+│   ├── conftest.py           # pytest fixtures (Flask test client, in-memory DB)
+│   ├── test_ratings.py       # Backend tests: _song_key, _rating_counts, /api/rate
+│   └── js/
+│       └── ratingUtils.test.js  # Frontend tests: all ratingUtils functions
 └── instance/
     └── radio_calico.db       # SQLite database (auto-created)
 ```
@@ -37,6 +45,8 @@ Radio_Calico/
 - **Database:** SQLite via Flask-SQLAlchemy
 - **Templates:** Jinja2
 - **Frontend:** Plain HTML/CSS/JS — hls.js loaded from CDN for HLS playback
+- **Backend tests:** pytest (in-memory SQLite, Flask test client)
+- **Frontend tests:** Jest + jsdom
 
 ---
 
@@ -81,6 +91,10 @@ Songs are keyed by `"{title}||{artist}"` (see `_song_key()`). This string is pas
 
 `static/js/main.js` uses hls.js (CDN) for non-Safari browsers; Safari gets native HLS via `audio.src`. The stream URL is hardcoded at the top of `main.js`.
 
+### JS file split
+
+`ratingUtils.js` contains all rating logic (`escHtml`, `getVisitorId`, `getVotes`, `saveVote`, `renderRatingsUI`, `submitRatingToServer`). Functions that touch the DOM accept element objects as parameters so they can be tested in Jest without a real browser. `main.js` provides thin wrappers that pass the live DOM refs. `ratingUtils.js` must be loaded before `main.js` in `index.html`.
+
 ---
 
 ## Models (`models.py`)
@@ -115,6 +129,25 @@ python3 -c "from app import app, db; app.app_context().push(); print(db.engine.t
 ```
 
 To add a model: define it in `models.py`, restart — `db.create_all()` handles it.
+
+---
+
+## Testing
+
+```bash
+# Backend (pytest)
+source venv/bin/activate
+pip install pytest       # first time only
+pytest                   # runs tests/test_ratings.py
+
+# Frontend (Jest)
+npm install              # first time only
+npm test                 # runs tests/js/ratingUtils.test.js
+```
+
+Backend tests use an in-memory SQLite DB; they never touch `radio_calico.db`.
+
+`ratingUtils.js` exports functions with injected DOM dependencies so Jest can test them without a browser. `main.js` wraps those functions, passing the real DOM element refs.
 
 ---
 
