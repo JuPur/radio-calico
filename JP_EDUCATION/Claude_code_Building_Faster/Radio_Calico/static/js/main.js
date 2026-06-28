@@ -1,31 +1,9 @@
 const STREAM_URL  = "https://d3d4yli4hf5bmh.cloudfront.net/hls/live.m3u8";
 const POLL_MS     = 5000;
 
-// Unique visitor ID — persists across page refreshes, one vote per song per browser
-function getVisitorId() {
-    let id = localStorage.getItem("rc_visitor_id");
-    if (!id) {
-        id = crypto.randomUUID();
-        localStorage.setItem("rc_visitor_id", id);
-    }
-    return id;
-}
+// escHtml, getVisitorId, getVotes, saveVote, renderRatingsUI, submitRatingToServer
+// are loaded from ratingUtils.js (script tag before this file)
 const VISITOR_ID = getVisitorId();
-
-// Locally cached votes: { song_key: "up" | "down" }
-function getVotes() {
-    try { return JSON.parse(localStorage.getItem("rc_votes") || "{}"); }
-    catch { return {}; }
-}
-function saveVote(songKey, direction) {
-    const v = getVotes();
-    v[songKey] = direction;
-    localStorage.setItem("rc_votes", JSON.stringify(v));
-}
-
-function escHtml(s) {
-    return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
 
 const audio              = document.getElementById("radioAudio");
 const artworkPlaceholder = document.getElementById("artworkPlaceholder");
@@ -70,26 +48,10 @@ let _lastTitle = null;
 let _songKey   = null;
 
 function renderRatings(songKey, thumbsUp, thumbsDown) {
-    if (!songKey) { ratingRow.style.display = "none"; return; }
-
-    ratingRow.style.display = "flex";
-    thumbsUpCount.textContent   = thumbsUp;
-    thumbsDownCount.textContent = thumbsDown;
-
-    const prior = getVotes()[songKey];
-    if (prior) {
-        // Already voted — show buttons with counts, skip prompt
-        ratingPrompt.style.display   = "none";
-        ratingButtons.style.display  = "flex";
-        thumbsUpBtn.classList.toggle("voted-up",    prior === "up");
-        thumbsDownBtn.classList.toggle("voted-down", prior === "down");
-    } else {
-        // Not yet voted — show prompt only
-        ratingPrompt.style.display   = "block";
-        ratingButtons.style.display  = "none";
-        thumbsUpBtn.classList.remove("voted-up");
-        thumbsDownBtn.classList.remove("voted-down");
-    }
+    renderRatingsUI(
+        { ratingRow, ratingPrompt, ratingButtons, thumbsUpBtn, thumbsDownBtn, thumbsUpCount, thumbsDownCount },
+        songKey, thumbsUp, thumbsDown
+    );
 }
 
 function setStatus(msg) {
@@ -312,45 +274,12 @@ volumeSlider.addEventListener("input", () => {
 });
 
 async function submitRating(isThumbsUp) {
-    if (!_songKey) return;
-    const direction = isThumbsUp ? "up" : "down";
-    const prior = getVotes()[_songKey];
-    if (prior === direction) return;
-
-    // Snapshot original counts for rollback
-    const origUp   = parseInt(thumbsUpCount.textContent);
-    const origDown = parseInt(thumbsDownCount.textContent);
-
-    // Optimistic count update
-    let up   = origUp;
-    let down = origDown;
-    if (prior === "up")   up--;
-    if (prior === "down") down--;
-    if (isThumbsUp) up++; else down++;
-
-    saveVote(_songKey, direction);
-    renderRatings(_songKey, up, down);
-
-    try {
-        const res  = await fetch("/api/rate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ song_key: _songKey, visitor_id: VISITOR_ID, is_thumbs_up: isThumbsUp }),
-        });
-        const data = await res.json();
-        if (data.thumbs_up != null) {
-            thumbsUpCount.textContent   = data.thumbs_up;
-            thumbsDownCount.textContent = data.thumbs_down;
-        } else {
-            // Server rejected the vote — roll back to prior state
-            const votes = getVotes();
-            if (prior) votes[_songKey] = prior; else delete votes[_songKey];
-            localStorage.setItem("rc_votes", JSON.stringify(votes));
-            renderRatings(_songKey, origUp, origDown);
-        }
-    } catch (_) {
-        // Keep the local optimistic update; server sync will catch up on next poll
-    }
+    await submitRatingToServer(
+        { thumbsUpCount, thumbsDownCount },
+        _songKey, VISITOR_ID,
+        renderRatings,
+        isThumbsUp
+    );
 }
 
 ratingPromptBtn.addEventListener("click", () => {
