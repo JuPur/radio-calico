@@ -37,7 +37,6 @@ const errorMsg   = document.getElementById("errorMsg");
 let hls = null;
 let playing = false;
 let stopping = false;
-let pollTimer  = null;
 let clockTimer = null;
 
 // Timing state synced from server
@@ -152,15 +151,11 @@ function renderHistory(tracks) {
 }
 
 function startPolling() {
-    fetchNowPlaying();
-    pollTimer  = setInterval(fetchNowPlaying, POLL_MS);
     clockTimer = setInterval(tickClock, 1000);
 }
 
 function stopPolling() {
-    clearInterval(pollTimer);
     clearInterval(clockTimer);
-    pollTimer  = null;
     clockTimer = null;
     timeElapsed.textContent   = "0:00";
     timeRemaining.textContent = "—";
@@ -290,8 +285,9 @@ ratingPromptBtn.addEventListener("click", () => {
 thumbsUpBtn.addEventListener("click",   () => submitRating(true));
 thumbsDownBtn.addEventListener("click", () => submitRating(false));
 
-// Load history immediately on page open
-fetch("/api/history").then(r => r.json()).then(renderHistory).catch(() => {});
+// Poll metadata immediately on load — show track info before user presses Play
+fetchNowPlaying();
+setInterval(fetchNowPlaying, POLL_MS);
 
 audio.addEventListener("waiting",  () => setStatus("Buffering…"));
 audio.addEventListener("playing",  () => { setStatus("Playing"); setPlayingUI(true); });
