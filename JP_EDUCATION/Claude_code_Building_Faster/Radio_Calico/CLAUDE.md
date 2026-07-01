@@ -23,6 +23,7 @@ Radio_Calico/
 ├── docker-compose.prod.yml   # Prod: nginx:80 → Gunicorn:8000 → PostgreSQL; SECRET_KEY + POSTGRES_PASSWORD from env
 ├── nginx/
 │   └── nginx.conf            # Reverse proxy to Gunicorn on web:8000
+├── Makefile                  # Dev/prod lifecycle, test, and security-scan targets
 ├── .dockerignore
 ├── templates/
 │   └── index.html            # Single-page Jinja2 template
@@ -82,9 +83,10 @@ export POSTGRES_PASSWORD=$(openssl rand -hex 32)
 docker compose -f docker-compose.prod.yml up --build
 ```
 
-SQLite is stored in a named volume (`db_data`) and survives restarts in both modes.
+In dev, SQLite is stored in a named volume (`db_data`) and survives restarts.
+In prod, PostgreSQL data is stored in the `db_data` volume at `/var/lib/postgresql/data`.
 
-`SECRET_KEY` falls back to a weak dev default if the env var is unset — always set it in prod.
+`SECRET_KEY` and `POSTGRES_PASSWORD` fall back to weak dev defaults if unset — always set both in prod.
 
 ---
 
@@ -92,7 +94,7 @@ SQLite is stored in a named volume (`db_data`) and survives restarts in both mod
 
 ### Data flow
 
-1. **Client** polls `/api/nowplaying` every 5 seconds.
+1. **Client** polls `/api/nowplaying` every 5 seconds — starting immediately on page load, not gated on the Play button.
 2. **`/api/nowplaying`** scrapes `https://radio3.radio-calico.com/nowplaying` (HTML, BeautifulSoup) for title/artist/album/cover.
 3. On a track change, the outgoing track is written to `PlayHistory` and the new track triggers:
    - iTunes Search API → permanent 600×600 cover URL
@@ -145,34 +147,48 @@ Songs are keyed by `"{title}||{artist}"` (see `_song_key()`). This string is pas
 
 ## Database
 
-SQLite at `instance/radio_calico.db`, auto-created on first run.
+**Dev:** SQLite at `instance/radio_calico.db`, auto-created on first run.
 
 ```bash
-# Inspect tables
+# Inspect tables (dev)
 source venv/bin/activate
 python3 -c "from app import app, db; app.app_context().push(); print(db.engine.table_names())"
 ```
 
-To add a model: define it in `models.py`, restart — `db.create_all()` handles it.
+**Prod:** PostgreSQL 16 in the `db` container. Connect via:
+
+```bash
+docker exec -it radio_calico-db-1 psql -U radio_calico
+```
+
+The database URL is read from the `DATABASE_URL` env var; falls back to SQLite if unset (dev only).
+
+To add a model: define it in `models.py`, restart — `db.create_all()` handles it. The `create_all()` call is wrapped in try/except to handle Gunicorn worker races on first boot.
 
 ---
 
 ## Testing
 
 ```bash
-# Backend (pytest)
+# Run all tests (backend + frontend)
+make test
+
+# Backend only (pytest)
 source venv/bin/activate
-pip install pytest       # first time only
 pytest                   # runs tests/test_ratings.py
 
-# Frontend (Jest)
-npm install              # first time only
+# Frontend only (Jest)
 npm test                 # runs tests/js/ratingUtils.test.js
+
+# Security scanning
+make test-security       # npm audit (JS) + pip-audit (Python)
 ```
 
 Backend tests use an in-memory SQLite DB; they never touch `radio_calico.db`.
 
 `ratingUtils.js` exports functions with injected DOM dependencies so Jest can test them without a browser. `main.js` wraps those functions, passing the real DOM element refs.
+
+`pip-audit` must be installed (`pip install pip-audit`) and requires Python 3.10+ to resolve the patched versions of `requests`, `urllib3`, and `python-dotenv`. Run it in the Docker container or a Python 3.11 environment for accurate results.
 
 ---
 
