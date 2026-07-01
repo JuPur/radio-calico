@@ -22,7 +22,10 @@ app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-in-pr
 db.init_app(app)
 
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+    except Exception:
+        db.session.rollback()
 
 # In-memory current track — resets on restart, that's fine
 _track = {
