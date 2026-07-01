@@ -197,6 +197,23 @@ The hls.js CDN script tag is pinned to `1.6.16` with a SHA-384 SRI hash — the 
 
 ---
 
+## CI (GitHub Actions)
+
+Workflow at `.github/workflows/ci.yml` (located at the **repo root**, not inside `Radio_Calico/`; uses `defaults.run.working-directory` to run all steps from this subdirectory).
+
+Triggers: push to `main`, PRs to `main`.
+
+Two parallel jobs:
+
+| Job | Steps | ~time |
+|---|---|---|
+| **Tests** | pytest (Python 3.11) + Jest (Node 24) | ~28s |
+| **Security Scans** | pip-audit + bandit + npm audit | ~23s |
+
+To view runs: `gh run list --workflow=ci.yml` from the repo root, or open the Actions tab on GitHub.
+
+---
+
 ## Dependencies
 
 ```bash

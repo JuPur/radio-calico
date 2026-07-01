@@ -7,7 +7,7 @@ A single-page HLS radio player with live now-playing metadata, cover art, play h
 - **Live HLS stream** — hls.js for all browsers, native HLS for Safari
 - **Now playing** — title, artist, album, and 600×600 cover art fetched from iTunes
 - **Progress bar** — elapsed / remaining time via MusicBrainz track duration
-- **Play history** — last 5 tracks with cover art, persisted in SQLite
+- **Play history** — last 5 tracks with cover art, persisted in database
 - **Song ratings** — thumbs up / down per visitor (UUID-based, stored server-side)
 - **Ad-free, data-free, subscription-free**
 
@@ -16,12 +16,14 @@ A single-page HLS radio player with live now-playing metadata, cover art, play h
 | Layer | Tech |
 |---|---|
 | Backend | Python / Flask |
-| Database | SQLite via Flask-SQLAlchemy |
+| Database | SQLite (dev) / PostgreSQL 16 (prod) via Flask-SQLAlchemy |
 | Templates | Jinja2 |
 | Frontend | Vanilla HTML / CSS / JS |
-| HLS playback | hls.js (CDN) |
+| HLS playback | hls.js (CDN, SRI-pinned) |
+| Web server | nginx → Gunicorn (prod) |
 | Backend tests | pytest + Flask test client |
 | Frontend tests | Jest + jsdom |
+| CI | GitHub Actions (tests + security scans) |
 
 ## Getting started
 
@@ -33,15 +35,19 @@ Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 git clone https://github.com/JuPur/radio-calico.git
 cd radio-calico
 
-# Dev — live reload, port 5050
+# Dev — Flask dev server, live reload, port 5050
 docker compose up --build
+# or: make dev-up
 
-# Prod — Gunicorn (4 workers), port 8000
+# Prod — nginx:80 → Gunicorn → PostgreSQL
 export SECRET_KEY=$(openssl rand -hex 32)
+export POSTGRES_PASSWORD=$(openssl rand -hex 32)
 docker compose -f docker-compose.prod.yml up --build
+# or: make prod-up  (after exporting both vars)
 ```
 
-The SQLite database is stored in a named Docker volume (`db_data`) and survives container restarts.
+**Dev**: SQLite database stored in a named Docker volume (`db_data`).  
+**Prod**: PostgreSQL 16 data stored in a named Docker volume (`db_data`). Both survive container restarts.
 
 ### Local (without Docker)
 
@@ -66,10 +72,13 @@ The SQLite database is created automatically on first run at `instance/radio_cal
 ├── requirements.txt
 ├── pytest.ini              # pytest config
 ├── package.json            # Jest config
+├── Makefile                # dev/prod lifecycle, test, and security targets
 ├── Dockerfile              # Multi-stage: dev (Flask) and prod (Gunicorn) targets
-├── docker-compose.yml      # Dev: port 5050, source volume-mounted
-├── docker-compose.prod.yml # Prod: port 8000, code baked in, SECRET_KEY from env
+├── docker-compose.yml      # Dev: port 5050, source volume-mounted, SQLite
+├── docker-compose.prod.yml # Prod: nginx:80 → Gunicorn → PostgreSQL
 ├── .dockerignore
+├── nginx/
+│   └── nginx.conf          # Reverse proxy to Gunicorn
 ├── templates/
 │   └── index.html          # Single-page Jinja2 template
 ├── static/
@@ -88,15 +97,25 @@ The SQLite database is created automatically on first run at `instance/radio_cal
 ## Running tests
 
 ```bash
-# Backend
-source venv/bin/activate
-pip install pytest   # first time only
-pytest
+# All tests (backend + frontend)
+make test
 
-# Frontend
-npm install          # first time only
-npm test
+# Or individually:
+source venv/bin/activate && pytest   # backend (16 tests)
+npm test                             # frontend (32 tests)
 ```
+
+### Security scanning
+
+```bash
+make test-security
+```
+
+Runs three scanners: `npm audit` (JS CVEs), `pip-audit` (Python CVEs, in a Python 3.11 Docker container), and `bandit` (Python SAST).
+
+### CI
+
+GitHub Actions runs both test and security scan jobs in parallel on every push and PR to `main`. See `.github/workflows/ci.yml`.
 
 ## API
 
