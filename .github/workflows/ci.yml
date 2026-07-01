@@ -22,22 +22,19 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Python dependencies
-        run: pip install -r requirements.txt pytest
-
-      - name: Backend tests (pytest)
-        run: pytest
-
-      - name: Set up Node.js 20
+      - name: Set up Node.js 24
         uses: actions/setup-node@v4
         with:
           node-version: "24"
 
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt pytest
+
       - name: Install JS dependencies
         run: npm ci
 
-      - name: Frontend tests (Jest)
-        run: npm test
+      - name: Run tests
+        run: make test
 
   security:
     name: Security Scans
@@ -50,22 +47,16 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install security tools
-        run: pip install pip-audit bandit
-
-      - name: pip-audit — Python CVEs
-        run: pip-audit -r requirements.txt
-
-      - name: bandit — Python SAST
-        run: bandit -r app.py models.py
-
-      - name: Set up Node.js 20
+      - name: Set up Node.js 24
         uses: actions/setup-node@v4
         with:
           node-version: "24"
 
+      - name: Install bandit
+        run: pip install bandit
+
       - name: Install JS dependencies
         run: npm ci
 
-      - name: npm audit — JS CVEs
-        run: npm audit
+      - name: Run security scans
+        run: make test-security
