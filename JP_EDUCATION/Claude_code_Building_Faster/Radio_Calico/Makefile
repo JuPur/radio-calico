@@ -1,20 +1,24 @@
-.PHONY: help dev-up dev-down dev-logs prod-up prod-down prod-logs ps
+.PHONY: help dev-up dev-down dev-logs prod-up prod-down prod-logs ps test test-security
 
 help:
 	@echo "Usage: make <target>"
 	@echo ""
 	@echo "  Dev  (port 5050, live reload)"
-	@echo "    dev-up      Build and start dev container"
-	@echo "    dev-down    Stop and remove dev container"
-	@echo "    dev-logs    Tail dev container logs"
+	@echo "    dev-up        Build and start dev container"
+	@echo "    dev-down      Stop and remove dev container"
+	@echo "    dev-logs      Tail dev container logs"
 	@echo ""
-	@echo "  Prod (port 8000, Gunicorn)"
-	@echo "    prod-up     Build and start prod container (requires SECRET_KEY)"
-	@echo "    prod-down   Stop and remove prod container"
-	@echo "    prod-logs   Tail prod container logs"
+	@echo "  Prod (port 80, nginx + Gunicorn + PostgreSQL)"
+	@echo "    prod-up       Build and start prod stack (requires SECRET_KEY + POSTGRES_PASSWORD)"
+	@echo "    prod-down     Stop and remove prod stack"
+	@echo "    prod-logs     Tail prod container logs"
+	@echo ""
+	@echo "  Testing"
+	@echo "    test          Run backend (pytest) and frontend (Jest) tests"
+	@echo "    test-security Run npm audit (JS) and pip-audit (Python) security scans"
 	@echo ""
 	@echo "  Other"
-	@echo "    ps          Show running containers"
+	@echo "    ps            Show running containers"
 
 dev-up:
 	docker compose up --build -d
@@ -40,3 +44,14 @@ prod-logs:
 
 ps:
 	docker compose ps
+
+test:
+	pytest
+	npm test
+
+test-security:
+	@echo "=== JS dependencies — npm audit ==="
+	npm audit
+	@echo ""
+	@echo "=== Python dependencies — pip-audit ==="
+	pip-audit -r requirements.txt
