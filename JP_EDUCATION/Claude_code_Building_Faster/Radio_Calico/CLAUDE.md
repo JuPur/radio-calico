@@ -188,7 +188,12 @@ Backend tests use an in-memory SQLite DB; they never touch `radio_calico.db`.
 
 `ratingUtils.js` exports functions with injected DOM dependencies so Jest can test them without a browser. `main.js` wraps those functions, passing the real DOM element refs.
 
-`pip-audit` must be installed (`pip install pip-audit`) and requires Python 3.10+ to resolve the patched versions of `requests`, `urllib3`, and `python-dotenv`. Run it in the Docker container or a Python 3.11 environment for accurate results.
+`make test-security` runs three scanners:
+- **npm audit** — JS dependency CVEs
+- **pip-audit** — Python dependency CVEs (runs inside a Python 3.11 Docker container to match prod; requires Docker)
+- **bandit** — Python SAST (install locally: `pip install bandit`)
+
+The hls.js CDN script tag is pinned to `1.6.16` with a SHA-384 SRI hash — the browser will refuse to execute it if the CDN serves a tampered file.
 
 ---
 

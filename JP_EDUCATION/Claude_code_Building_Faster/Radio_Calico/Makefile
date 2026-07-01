@@ -53,5 +53,9 @@ test-security:
 	@echo "=== JS dependencies — npm audit ==="
 	npm audit
 	@echo ""
-	@echo "=== Python dependencies — pip-audit ==="
-	pip-audit -r requirements.txt
+	@echo "=== Python dependencies — pip-audit (Python 3.11 container) ==="
+	docker run --rm -v "$(PWD)/requirements.txt:/requirements.txt" python:3.11-slim \
+		sh -c "pip install pip-audit -q && pip-audit -r /requirements.txt"
+	@echo ""
+	@echo "=== Python SAST — bandit ==="
+	bandit -r app.py models.py
