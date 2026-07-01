@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-Radio Kryten is a single-page HLS radio player. It proxies now-playing metadata from an upstream radio server, enriches it with cover art (iTunes) and track duration (MusicBrainz), stores play history in SQLite, and lets visitors rate songs with a thumbs-up/down system.
+Radio Kryten is a single-page HLS radio player. It proxies now-playing metadata from an upstream radio server, enriches it with cover art (iTunes) and track duration (MusicBrainz), stores play history in a database, and lets visitors rate songs with a thumbs-up/down system.
 
 ---
 
@@ -20,7 +20,9 @@ Radio_Calico/
 ├── .env                      # FLASK_DEBUG=1, port config
 ├── Dockerfile                # Multi-stage: base → dev (Flask) / prod (Gunicorn)
 ├── docker-compose.yml        # Dev: port 5050, source volume-mounted for live reload
-├── docker-compose.prod.yml   # Prod: port 8000, SECRET_KEY from env, db_data volume
+├── docker-compose.prod.yml   # Prod: nginx:80 → Gunicorn:8000 → PostgreSQL; SECRET_KEY + POSTGRES_PASSWORD from env
+├── nginx/
+│   └── nginx.conf            # Reverse proxy to Gunicorn on web:8000
 ├── .dockerignore
 ├── templates/
 │   └── index.html            # Single-page Jinja2 template
@@ -46,12 +48,12 @@ Radio_Calico/
 ## Stack
 
 - **Backend:** Python / Flask
-- **Database:** SQLite via Flask-SQLAlchemy
+- **Database:** SQLite (dev) / PostgreSQL 16 (prod) via Flask-SQLAlchemy
 - **Templates:** Jinja2
 - **Frontend:** Plain HTML/CSS/JS — hls.js loaded from CDN for HLS playback
 - **Backend tests:** pytest (in-memory SQLite, Flask test client)
 - **Frontend tests:** Jest + jsdom
-- **Container:** Docker — dev (Flask dev server) and prod (Gunicorn, 4 workers) targets
+- **Container:** Docker — dev (Flask dev server + SQLite) and prod (nginx + Gunicorn + PostgreSQL) targets
 
 ---
 
@@ -74,8 +76,9 @@ Debug mode is on by default (`.env` sets `FLASK_DEBUG=1`).
 # Dev — live reload, source volume-mounted, port 5050
 docker compose up --build
 
-# Prod — Gunicorn, code baked in, port 8000
+# Prod — nginx:80 → Gunicorn → PostgreSQL
 export SECRET_KEY=$(openssl rand -hex 32)
+export POSTGRES_PASSWORD=$(openssl rand -hex 32)
 docker compose -f docker-compose.prod.yml up --build
 ```
 
