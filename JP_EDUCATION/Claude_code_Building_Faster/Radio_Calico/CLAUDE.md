@@ -88,6 +88,8 @@ In prod, PostgreSQL data is stored in the `db_data` volume at `/var/lib/postgres
 
 `SECRET_KEY` and `POSTGRES_PASSWORD` fall back to weak dev defaults if unset — always set both in prod.
 
+**Stale volume gotcha:** `POSTGRES_PASSWORD` is generated fresh each shell session. If a `db_data` volume exists from a prior run, PostgreSQL rejects the new password and `/api/nowplaying` returns 500. Fix: `docker compose -f docker-compose.prod.yml down -v` before restarting (this wipes play history). To avoid this, reuse the same `POSTGRES_PASSWORD` across sessions.
+
 ---
 
 ## Architecture
@@ -104,6 +106,8 @@ In prod, PostgreSQL data is stored in the `db_data` volume at `/var/lib/postgres
 ### In-memory state
 
 `_track` in `app.py` is a module-level dict holding the current track. It resets on server restart — that's intentional. Only the `itunes_cover` URL (permanent CDN) is safe to persist to `PlayHistory`; the radio server's cover URLs are session-relative.
+
+**Gunicorn multi-worker gotcha:** each worker process holds its own `_track`, so on startup all workers see the current song as a "new" track. Without a guard, each worker would independently write the same track to `PlayHistory`. Fixed by checking the most recent DB entry before inserting — if it already matches the outgoing track, skip the write.
 
 ### Song identity
 
@@ -207,8 +211,10 @@ Two parallel jobs:
 
 | Job | Steps | ~time |
 |---|---|---|
-| **Tests** | pytest (Python 3.11) + Jest (Node 24) | ~28s |
-| **Security Scans** | pip-audit + bandit + npm audit | ~23s |
+| **Tests** | `make test` (pytest + Jest, Python 3.11 + Node 24) | ~15s |
+| **Security Scans** | `make test-security` (pip-audit via Docker + bandit + npm audit) | ~29s |
+
+Both jobs delegate to Makefile targets — adding a scanner or test runner to the Makefile automatically applies to CI without editing the workflow. `make test-security` runs pip-audit inside a `python:3.11-slim` Docker container; Docker is pre-installed on `ubuntu-latest` runners.
 
 To view runs: `gh run list --workflow=ci.yml` from the repo root, or open the Actions tab on GitHub.
 
