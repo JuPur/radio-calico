@@ -181,16 +181,25 @@ def nowplaying():
         album     = paras[2].get_text(strip=True) if len(paras) > 2 else None
 
         if title != _track["title"]:
-            # Persist outgoing track to history (only use permanent iTunes cover)
+            # Persist outgoing track to history (only use permanent iTunes cover).
+            # Guard against Gunicorn multi-worker duplication: each worker holds
+            # independent _track state, so multiple workers may see the same
+            # "title changed" transition. Check the DB before writing.
             if _track["title"]:
-                db.session.add(PlayHistory(
-                    title=_track["title"],
-                    artist=_track["artist"],
-                    album=_track["album"],
-                    cover=_track["itunes_cover"],
-                    played_at=time.time(),
-                ))
-                db.session.commit()
+                last = (
+                    PlayHistory.query
+                    .order_by(PlayHistory.played_at.desc())
+                    .first()
+                )
+                if last is None or last.title != _track["title"] or last.artist != _track["artist"]:
+                    db.session.add(PlayHistory(
+                        title=_track["title"],
+                        artist=_track["artist"],
+                        album=_track["album"],
+                        cover=_track["itunes_cover"],
+                        played_at=time.time(),
+                    ))
+                    db.session.commit()
 
             # Look up permanent cover art and duration for new track
             itunes_cover   = _itunes_cover(artist, title) if (artist and title) else None
