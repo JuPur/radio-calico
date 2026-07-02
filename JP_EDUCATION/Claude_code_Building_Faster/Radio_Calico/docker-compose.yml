@@ -4,7 +4,7 @@ services:
       context: .
       target: dev
     ports:
-      - "5050:8000"
+      - "5050:5050"
     volumes:
       - .:/app           # live reload — source changes reflect immediately
       - db_data:/app/instance

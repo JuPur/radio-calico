@@ -22,7 +22,7 @@ Radio_Calico/
 ├── docker-compose.yml        # Dev: port 5050, source volume-mounted for live reload
 ├── docker-compose.prod.yml   # Prod: nginx:80 → Gunicorn:8000 → PostgreSQL; SECRET_KEY + POSTGRES_PASSWORD from env
 ├── nginx/
-│   └── nginx.conf            # Reverse proxy to Gunicorn on web:8000
+│   └── nginx.conf            # gzip, /static/ served directly with 1-year cache, reverse proxy to Gunicorn
 ├── Makefile                  # Dev/prod lifecycle, test, and security-scan targets
 ├── .dockerignore
 ├── templates/
@@ -86,6 +86,8 @@ docker compose -f docker-compose.prod.yml up --build
 In dev, SQLite is stored in a named volume (`db_data`) and survives restarts.
 In prod, PostgreSQL data is stored in the `db_data` volume at `/var/lib/postgresql/data`.
 
+**Dev port mapping:** `docker-compose.yml` maps `5050:5050` (host:container). Flask inside the container listens on 5050 (`FLASK_RUN_PORT=5050` in Dockerfile). Do not change this to `5050:8000` — port 8000 is the Gunicorn port used only in prod.
+
 `SECRET_KEY` and `POSTGRES_PASSWORD` fall back to weak dev defaults if unset — always set both in prod.
 
 **Stale volume gotcha:** `POSTGRES_PASSWORD` is generated fresh each shell session. If a `db_data` volume exists from a prior run, PostgreSQL rejects the new password and `/api/nowplaying` returns 500. Fix: `docker compose -f docker-compose.prod.yml down -v` before restarting (this wipes play history). To avoid this, reuse the same `POSTGRES_PASSWORD` across sessions.
@@ -125,6 +127,15 @@ Songs are keyed by `"{title}||{artist}"` (see `_song_key()`). This string is pas
 ### JS file split
 
 `ratingUtils.js` contains all rating logic (`escHtml`, `getVisitorId`, `getVotes`, `saveVote`, `renderRatingsUI`, `submitRatingToServer`). Functions that touch the DOM accept element objects as parameters so they can be tested in Jest without a real browser. `main.js` provides thin wrappers that pass the live DOM refs. `ratingUtils.js` must be loaded before `main.js` in `index.html`.
+
+### Prod performance (nginx)
+
+Three optimisations applied in `nginx/nginx.conf` and `docker-compose.prod.yml`:
+- **gzip** — `gzip on` for CSS/JS/HTML/JSON; ~60–70% reduction on the wire.
+- **Static files via nginx** — `location /static/` uses `alias /app/static/` with `Cache-Control: public, max-age=31536000, immutable`, bypassing Gunicorn entirely for every CSS/JS/image. Requires `./static:/app/static:ro` volume mount on the nginx service in `docker-compose.prod.yml`.
+- **Async Google Fonts** — loaded with `media="print" onload="this.media='all'"` in `index.html` to avoid blocking first paint.
+
+These optimisations apply to prod only. The dev stack (Flask dev server) has none of them.
 
 ---
 

@@ -78,7 +78,7 @@ The SQLite database is created automatically on first run at `instance/radio_cal
 ├── docker-compose.prod.yml # Prod: nginx:80 → Gunicorn → PostgreSQL
 ├── .dockerignore
 ├── nginx/
-│   └── nginx.conf          # Reverse proxy to Gunicorn
+│   └── nginx.conf          # gzip, static file serving (1-year cache), reverse proxy to Gunicorn
 ├── templates/
 │   └── index.html          # Single-page Jinja2 template
 ├── static/
